@@ -211,6 +211,9 @@ func loginRun(opts *LoginOptions) error {
 			return err
 		}
 		err = cfg.Write()
+		if err != nil {
+			return err
+		}
 
 		httpClient, err := opts.HttpClient()
 		if err != nil {
