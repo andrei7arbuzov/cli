@@ -83,7 +83,7 @@ func NewCmdLogin(f *cmdutil.Factory, runF func(*LoginOptions) error) *cobra.Comm
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.Hostname, "hostname", defaultHostname, "The hostname of the GitHub instance to authenticate with")
+	cmd.Flags().StringVar(&opts.Hostname, "hostname", "", "The hostname of the GitHub instance to authenticate with")
 	cmd.Flags().Bool("with-token", false, "If specified, token is read from STDIN")
 
 	return cmd
@@ -132,28 +132,32 @@ func loginRun(opts *LoginOptions) error {
 
 	// TODO consider explicitly telling survey what io to use since it's implicit right now
 
-	var hostType int
-	err = prompt.SurveyAskOne(&survey.Select{
-		Message: "What account do you want to log into?",
-		Options: []string{
-			"GitHub.com",
-			"GitHub Enterprise",
-		},
-	}, &hostType)
+	hostname := opts.Hostname
 
-	if err != nil {
-		return fmt.Errorf("could not prompt: %w", err)
-	}
+	if hostname == "" {
+		var hostType int
+		err := prompt.SurveyAskOne(&survey.Select{
+			Message: "What account do you want to log into?",
+			Options: []string{
+				"GitHub.com",
+				"GitHub Enterprise",
+			},
+		}, &hostType)
 
-	isEnterprise := hostType == 1
-
-	hostname := defaultHostname
-	if isEnterprise {
-		err := prompt.SurveyAskOne(&survey.Input{
-			Message: "GHE hostname:",
-		}, &hostname, survey.WithValidator(survey.Required))
 		if err != nil {
 			return fmt.Errorf("could not prompt: %w", err)
+		}
+
+		isEnterprise := hostType == 1
+
+		hostname = defaultHostname
+		if isEnterprise {
+			err := prompt.SurveyAskOne(&survey.Input{
+				Message: "GHE hostname:",
+			}, &hostname, survey.WithValidator(survey.Required))
+			if err != nil {
+				return fmt.Errorf("could not prompt: %w", err)
+			}
 		}
 	}
 
