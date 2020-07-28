@@ -201,7 +201,6 @@ func loginRun(opts *LoginOptions) error {
 		err := prompt.SurveyAskOne(&survey.Password{
 			Message: "Paste your authentication token:",
 		}, &token, survey.WithValidator(survey.Required))
-
 		if err != nil {
 			return fmt.Errorf("could not prompt: %w", err)
 		}
@@ -241,6 +240,9 @@ func loginRun(opts *LoginOptions) error {
 			"SSH",
 		},
 	}, &gitProtocol)
+	if err != nil {
+		return fmt.Errorf("could not prompt: %w", err)
+	}
 
 	gitProtocol = strings.ToLower(gitProtocol)
 
