@@ -14,30 +14,81 @@ func Test_NewCmdLogin(t *testing.T) {
 	tests := []struct {
 		name     string
 		cli      string
+		stdin    string
+		stdinTTY bool
 		wants    LoginOptions
 		wantsErr bool
 	}{
 		{
-			name: "pat",
-			cli:  "--pat abc123",
+			name:  "nontty, with-token",
+			stdin: "abc123\n",
+			cli:   "--with-token",
 			wants: LoginOptions{
-				PAT: "abc123",
+				Hostname: "github.com",
+				Token:    "abc123",
 			},
 		},
 		{
-			name: "no pat",
-			cli:  "",
+			name:     "tty, with-token",
+			stdinTTY: true,
+			wantsErr: true,
+			cli:      "--with-token",
+		},
+		{
+			name:     "nontty, hostname",
+			cli:      "--hostname claire.redfield",
+			wantsErr: true,
+		},
+		{
+			name:     "nontty",
+			cli:      "",
+			wantsErr: true,
+		},
+		{
+			name:  "nontty, with-token, hostname",
+			cli:   "--hostname claire.redfield --with-token",
+			stdin: "abc123\n",
 			wants: LoginOptions{
-				PAT: "",
+				Hostname: "claire.redfield",
+				Token:    "abc123",
+			},
+		},
+		{
+			name:     "tty, with-token, hostname",
+			stdinTTY: true,
+			wantsErr: true,
+			cli:      "--with-token",
+		},
+		{
+			name:     "tty, hostname",
+			stdinTTY: true,
+			cli:      "--hostname barry.burton",
+			wants: LoginOptions{
+				Hostname: "barry.burton",
+				Token:    "",
+			},
+		},
+		{
+			name:     "tty",
+			stdinTTY: true,
+			cli:      "",
+			wants: LoginOptions{
+				Hostname: "",
+				Token:    "",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			io, _, _, _ := iostreams.Test()
+			io, stdin, _, _ := iostreams.Test()
 			f := &cmdutil.Factory{
 				IOStreams: io,
+			}
+
+			io.SetStdinTTY(tt.stdinTTY)
+			if tt.stdin != "" {
+				stdin.WriteString(tt.stdin)
 			}
 
 			argv, err := shlex.Split(tt.cli)
@@ -61,11 +112,13 @@ func Test_NewCmdLogin(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.wants.PAT, gotOpts.PAT)
+			assert.Equal(t, tt.wants.Token, gotOpts.Token)
+			assert.Equal(t, tt.wants.Hostname, gotOpts.Hostname)
 		})
 	}
 }
 
+/*
 func Test_loginRun(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -114,3 +167,4 @@ func Test_loginRun_ConfiguresProtocol(t *testing.T) {
 	cmd := NewCmdLogin()
 
 }
+*/

@@ -62,23 +62,35 @@ func NewCmdLogin(f *cmdutil.Factory, runF func(*LoginOptions) error) *cobra.Comm
 			# => read token from mytoken.txt and authenticate against a GitHub Enterprise instance
 		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			isTTY := opts.IO.IsStdinTTY()
+
+			if !isTTY {
+				if !cmd.Flags().Changed("with-token") {
+					return &cmdutil.FlagError{Err: errors.New("--with-token required when not attached to tty")}
+				}
+			}
+
 			wt, _ := cmd.Flags().GetBool("with-token")
 			if wt {
-				if opts.IO.IsStdinTTY() {
+				if isTTY {
 					return &cmdutil.FlagError{Err: errors.New("expected token on STDIN")}
 				}
 				defer opts.IO.In.Close()
 				token, err := ioutil.ReadAll(opts.IO.In)
 				if err != nil {
-					return fmt.Errorf("failed to read token from STDIN: %w", err)
+					return &cmdutil.FlagError{Err: fmt.Errorf("failed to read token from STDIN: %w", err)}
 				}
 
 				opts.Token = strings.TrimSpace(string(token))
+				if opts.Hostname == "" {
+					opts.Hostname = defaultHostname
+				}
 			}
 
 			if runF != nil {
 				return runF(opts)
 			}
+
 			return loginRun(opts)
 		},
 	}
